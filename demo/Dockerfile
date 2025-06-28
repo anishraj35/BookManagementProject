@@ -1,19 +1,22 @@
-# ---------- base image ----------
+# Use full JDK image (has certs) or install certs explicitly
 FROM eclipse-temurin:17-jdk-jammy
 
-# ---------- working dir ----------
 WORKDIR /app
 
-# ---------- copy Maven wrapper + pom first (better cache) ----------
+# ---------- OS packages ----------
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# ---------- copy Maven wrapper first (for cache) ----------
 COPY .mvn/ .mvn
 COPY mvnw pom.xml ./
 RUN chmod +x mvnw \
  && ./mvnw -q dependency:go-offline
 
-# ---------- copy the rest of the source and build ----------
+# ---------- copy source & build ----------
 COPY src ./src
 RUN ./mvnw -q clean package -DskipTests
 
-# ---------- runtime ----------
 EXPOSE 8080
-CMD ["sh", "-c", "java -jar target/*.jar"]
+CMD ["sh","-c","java -jar target/*.jar"]
